@@ -39,5 +39,5 @@ main =
         hex =
             Hex 0 0
     in
-        Collage.collage 600 600 (List.map (View.hexToForm layout) lotsOfHexes)
+        Collage.collage 600 600 (List.map (View.hexToForm layout) lotsOfHexes |> List.concat)
             |> Element.toHtml
