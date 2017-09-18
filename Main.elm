@@ -6,25 +6,8 @@ import Layout
 import Element
 import View
 import Html
-
-
-lotsOfHexes : List Hex
-lotsOfHexes =
-    [ --centre
-      Hex 0 0
-    , -- NE
-      Hex 0 1
-    , -- E
-      Hex 1 0
-    , -- SE
-      Hex 1 -1
-    , -- SW
-      Hex 0 -1
-    , -- W
-      Hex -1 0
-    , -- NW
-      Hex -1 1
-    ]
+import Map
+import Dict
 
 
 main : Html.Html msg
@@ -32,12 +15,22 @@ main =
     let
         layout =
             { orientation = Layout.pointyOrientation
-            , size = ( 88.8, 88.8 )
+            , size = ( 30.0, 30.0 )
             , origin = ( 0.0, 0.0 )
             }
 
-        hex =
-            Hex 0 0
+        lotsOfHexes =
+            List.map
+                (\( hash, _ ) ->
+                    let
+                        ( q, r ) =
+                            hash
+                    in
+                        Hex q r
+                )
+                (Dict.toList
+                    (Map.hexagonOfSea 7)
+                )
     in
         Collage.collage 800 800 (List.map (View.hexToForm layout) lotsOfHexes |> List.concat)
             |> Element.toHtml
