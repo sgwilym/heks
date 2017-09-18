@@ -1,7 +1,6 @@
 module Main exposing (..)
 
 import Collage
-import Hex exposing (Hex)
 import Layout
 import Element
 import View
@@ -15,22 +14,13 @@ main =
     let
         layout =
             { orientation = Layout.pointyOrientation
-            , size = ( 30.0, 30.0 )
+            , size = ( 40.0, 40.0 )
             , origin = ( 0.0, 0.0 )
             }
 
-        lotsOfHexes =
-            List.map
-                (\( hash, _ ) ->
-                    let
-                        ( q, r ) =
-                            hash
-                    in
-                        Hex q r
-                )
-                (Dict.toList
-                    (Map.hexagonOfSea 7)
-                )
+        seaWithLand =
+            Map.update (Map.hexagonOfSea 5) ( 0, 2 ) Map.Earth
+                |> Dict.toList
     in
-        Collage.collage 800 800 (List.map (View.hexToForm layout) lotsOfHexes |> List.concat)
+        Collage.collage 800 800 (List.map (View.hexToForm layout) seaWithLand |> List.concat)
             |> Element.toHtml

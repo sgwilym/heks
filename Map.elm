@@ -22,6 +22,11 @@ hexToHash hex =
     ( hex.q, hex.r )
 
 
+update : Map -> Hash -> Terrain -> Map
+update map hash newTerrain =
+    Dict.update hash (\maybeTerrain -> Just newTerrain) map
+
+
 hexagonOfSea : Int -> Map
 hexagonOfSea radius =
     let
