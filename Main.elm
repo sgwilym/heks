@@ -32,12 +32,12 @@ main =
     let
         layout =
             { orientation = Layout.pointyOrientation
-            , size = ( 50.0, 50.0 )
+            , size = ( 88.8, 88.8 )
             , origin = ( 0.0, 0.0 )
             }
 
         hex =
             Hex 0 0
     in
-        Collage.collage 600 600 (List.map (View.hexToForm layout) lotsOfHexes |> List.concat)
+        Collage.collage 800 800 (List.map (View.hexToForm layout) lotsOfHexes |> List.concat)
             |> Element.toHtml
