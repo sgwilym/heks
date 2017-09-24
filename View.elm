@@ -4,7 +4,6 @@ import Collage
 import Layout
 import Hex exposing (Hex)
 import Color
-import Text
 import Map
 
 
@@ -20,18 +19,9 @@ hexToForm layout ( ( q, r ), terrain ) =
         hexagonForm =
             case terrain of
                 Map.Earth ->
-                    Collage.filled Color.lightBlue hexagonShape
-
-                Map.Sea ->
                     Collage.filled Color.blue hexagonShape
 
-        coordinateText =
-            Collage.text
-                ((Text.fromString (String.join "  " [ toString hex.q, toString hex.r, toString (Hex.s hex) ]))
-                    |> Text.color Color.white
-                )
-                |> Collage.move (Layout.hexToPoint layout hex)
+                Map.Sea ->
+                    Collage.filled Color.lightBlue hexagonShape
     in
-        [ hexagonForm
-        , coordinateText
-        ]
+        [ hexagonForm ]
