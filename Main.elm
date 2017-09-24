@@ -80,9 +80,6 @@ updateTerrain mousePosition map =
     let
         hash =
             Layout.pointToHex layout (remapPosition mousePosition) |> Map.hexToHash
-
-        d =
-            Debug.log "hash" hash
     in
         case Dict.get hash map of
             Just terrain ->
@@ -120,9 +117,6 @@ remapPosition { x, y } =
 
         newY =
             -(toFloat y - originY)
-
-        d =
-            Debug.log "remapped coords" ( newX, newY )
     in
         ( newX / 40, newY / 40 )
 
@@ -141,12 +135,8 @@ layout =
 
 view : Model -> Html.Html msg
 view model =
-    let
-        seaWithLand =
-            model.map |> Dict.toList
-    in
-        Collage.collage 800 800 (List.map (View.hexToForm layout) seaWithLand |> List.concat)
-            |> Element.toHtml
+    Collage.collage 800 800 (List.map (View.hexToForm layout model.map) (Dict.keys model.map) |> List.concat)
+        |> Element.toHtml
 
 
 main : Program Never Model Msg
