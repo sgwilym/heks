@@ -34,7 +34,7 @@ hexToForm layout map ( q, r ) =
                     Collage.filled Color.gray hexagonShape
 
         islandShape =
-            Collage.circle 25
+            Collage.oval 40 30
 
         islandForm =
             let
@@ -87,14 +87,6 @@ hexToForm layout map ( q, r ) =
                             Layout.hexToPoint layout hex
                     in
                         ( x + cX, y + cY )
-
-                d =
-                    case direction of
-                        Hex.One ->
-                            Debug.log "hex one" (List.map getCorner range)
-
-                        _ ->
-                            Debug.log "eh" []
             in
                 Layout.hexToPoint layout hex :: (List.map getCorner range)
 

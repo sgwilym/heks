@@ -25,7 +25,7 @@ init =
     { mousePosition = { x = 0, y = 0 }
     , mouseIsDown = False
     , map =
-        Map.hexagonOfSea 5
+        Map.hexagonOfSea 6
     }
 
 
@@ -107,10 +107,13 @@ remapPosition : Mouse.Position -> ( Float, Float )
 remapPosition { x, y } =
     let
         originX =
-            400
+            500
 
         originY =
-            400
+            500
+
+        ( sizeX, sizeY ) =
+            layout.size
 
         newX =
             toFloat x - originX
@@ -118,7 +121,7 @@ remapPosition { x, y } =
         newY =
             -(toFloat y - originY)
     in
-        ( newX / 40, newY / 40 )
+        ( newX / sizeX, newY / sizeY )
 
 
 layout :
@@ -128,14 +131,14 @@ layout :
     }
 layout =
     { orientation = Layout.pointyOrientation
-    , size = ( 40.0, 40.0 )
+    , size = ( 40.0, 30.0 )
     , origin = ( 0.0, 0.0 )
     }
 
 
 view : Model -> Html.Html msg
 view model =
-    Collage.collage 800 800 (List.map (View.hexToForm layout model.map) (Dict.keys model.map) |> List.concat)
+    Collage.collage 1000 1000 (List.map (View.hexToForm layout model.map) (Dict.keys model.map) |> List.concat)
         |> Element.toHtml
 
 
