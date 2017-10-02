@@ -1,33 +1,28 @@
 module View exposing (..)
 
 import Collage
-import Layout
-import Hex exposing (Hex)
 import Color
-import Map
-import Dict
+import HexGrid exposing (HexGrid)
+import Terrain exposing (Terrain)
 
 
-hexToForm : Layout.Layout -> Map.Map -> ( Int, Int ) -> List Collage.Form
-hexToForm layout map ( q, r ) =
+hexToForm : HexGrid.Layout -> HexGrid Terrain -> HexGrid.Point -> List Collage.Form
+hexToForm layout grid point =
     let
-        hex =
-            Hex q r
-
         hexTerrain =
-            Dict.get (Map.hexToHash hex) map
+            HexGrid.valueAt point grid
 
         hexagonShape =
-            Collage.polygon (Layout.polygonCorners layout hex)
+            Collage.polygon (HexGrid.polygonCorners layout point)
 
         hexagonForm =
             case hexTerrain of
                 Just terrain ->
                     case terrain of
-                        Map.Earth ->
+                        Terrain.Earth ->
                             Collage.filled Color.lightBlue hexagonShape
 
-                        Map.Sea ->
+                        Terrain.Sea ->
                             Collage.filled Color.blue hexagonShape
 
                 Nothing ->
@@ -42,63 +37,64 @@ hexToForm layout map ( q, r ) =
                     case hexTerrain of
                         Just terrain ->
                             case terrain of
-                                Map.Earth ->
+                                Terrain.Earth ->
                                     Collage.filled Color.lightGreen islandShape
 
-                                Map.Sea ->
+                                Terrain.Sea ->
                                     Collage.filled Color.blue islandShape
 
                         Nothing ->
                             Collage.filled Color.gray islandShape
             in
-                Collage.move (Layout.hexToPoint layout hex) form
+                Collage.move (HexGrid.hexToPixel layout point) form
 
         neighbours =
-            Map.allNeighboursTerrain map hex
+            HexGrid.neighbors point
 
         directionToPolygon direction =
             let
                 range =
                     case direction of
-                        Hex.One ->
+                        0 ->
                             List.range 5 6
 
-                        Hex.Two ->
+                        1 ->
                             List.range 4 5
 
-                        Hex.Three ->
+                        2 ->
                             List.range 3 4
 
-                        Hex.Four ->
+                        3 ->
                             List.range 2 3
 
-                        Hex.Five ->
+                        4 ->
                             List.range 1 2
 
-                        Hex.Six ->
+                        _ ->
                             List.range 0 1
 
+                getCorner : Int -> ( Float, Float )
                 getCorner corner =
                     let
                         ( x, y ) =
-                            Layout.hexCornerOffset layout corner
+                            HexGrid.hexCornerOffset layout (toFloat corner)
 
                         ( cX, cY ) =
-                            Layout.hexToPoint layout hex
+                            HexGrid.hexToPixel layout point
                     in
                         ( x + cX, y + cY )
             in
-                Layout.hexToPoint layout hex :: (List.map getCorner range)
+                HexGrid.hexToPixel layout point :: (List.map getCorner range)
 
-        neighbourToMaybeForm direction maybeTerrain =
+        neighbourToMaybeForm ( direction, maybeTerrain ) =
             case hexTerrain of
                 Just reallyTerrain ->
                     case reallyTerrain of
-                        Map.Earth ->
+                        Terrain.Earth ->
                             case maybeTerrain of
                                 Just terrain ->
                                     case terrain of
-                                        Map.Earth ->
+                                        Terrain.Earth ->
                                             Just (Collage.filled Color.lightGreen (Collage.polygon (directionToPolygon direction)))
 
                                         _ ->
@@ -114,17 +110,15 @@ hexToForm layout map ( q, r ) =
                     Nothing
 
         directionPairs =
-            [ ( Hex.One, neighbours.one )
-            , ( Hex.Two, neighbours.two )
-            , ( Hex.Three, neighbours.three )
-            , ( Hex.Four, neighbours.four )
-            , ( Hex.Five, neighbours.five )
-            , ( Hex.Six, neighbours.six )
-            ]
+            List.indexedMap
+                (\index point ->
+                    ( index, HexGrid.valueAt point grid )
+                )
+                neighbours
 
         neighbourForms =
             List.filterMap
-                (\( direction, maybeTerrain ) -> neighbourToMaybeForm direction maybeTerrain)
+                neighbourToMaybeForm
                 directionPairs
     in
         hexagonForm :: (islandForm :: neighbourForms)

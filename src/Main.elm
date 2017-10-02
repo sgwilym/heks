@@ -1,13 +1,13 @@
 module Main exposing (..)
 
 import Collage
-import Layout
 import Element
 import View
 import Html
-import Map
 import Dict
 import Mouse
+import HexGrid exposing (HexGrid)
+import Terrain exposing (Terrain)
 
 
 -- MODEL
@@ -16,7 +16,7 @@ import Mouse
 type alias Model =
     { mousePosition : { x : Int, y : Int }
     , mouseIsDown : Bool
-    , map : Map.Map
+    , grid : HexGrid Terrain
     }
 
 
@@ -24,8 +24,8 @@ init : Model
 init =
     { mousePosition = { x = 0, y = 0 }
     , mouseIsDown = False
-    , map =
-        Map.hexagonOfSea 6
+    , grid =
+        HexGrid.empty 6 Terrain.Sea
     }
 
 
@@ -49,11 +49,11 @@ update msg model =
         MoveMsg position ->
             ( { mousePosition = position
               , mouseIsDown = model.mouseIsDown
-              , map =
+              , grid =
                     if model.mouseIsDown then
-                        updateTerrain position model.map
+                        updateTerrain position model.grid
                     else
-                        model.map
+                        model.grid
               }
             , Cmd.none
             )
@@ -61,7 +61,7 @@ update msg model =
         DownMsg position ->
             ( { mousePosition = model.mousePosition
               , mouseIsDown = True
-              , map = updateTerrain position model.map
+              , grid = updateTerrain position model.grid
               }
             , Cmd.none
             )
@@ -69,24 +69,27 @@ update msg model =
         UpMsg position ->
             ( { mousePosition = model.mousePosition
               , mouseIsDown = False
-              , map = model.map
+              , grid = model.grid
               }
             , Cmd.none
             )
 
 
-updateTerrain : Mouse.Position -> Map.Map -> Map.Map
-updateTerrain mousePosition map =
+updateTerrain : Mouse.Position -> HexGrid Terrain -> HexGrid Terrain
+updateTerrain mousePosition grid =
     let
-        hash =
-            Layout.pointToHex layout (remapPosition mousePosition) |> Map.hexToHash
+        point =
+            HexGrid.pixelToHex layout (remapPosition mousePosition)
+
+        d =
+            Debug.log "point" point
     in
-        case Dict.get hash map of
+        case HexGrid.valueAt point grid of
             Just terrain ->
-                Map.update map hash Map.Earth
+                HexGrid.insert point Terrain.Earth grid
 
             Nothing ->
-                map
+                grid
 
 
 
@@ -112,34 +115,33 @@ remapPosition { x, y } =
         originY =
             500
 
-        ( sizeX, sizeY ) =
-            layout.size
-
         newX =
             toFloat x - originX
 
         newY =
             -(toFloat y - originY)
     in
-        ( newX / sizeX, newY / sizeY )
+        ( newX, newY )
 
 
-layout :
-    { orientation : Layout.Orientation
-    , origin : Layout.Point
-    , size : Layout.Point
-    }
+layout : HexGrid.Layout
 layout =
-    { orientation = Layout.pointyOrientation
-    , size = ( 40.0, 30.0 )
-    , origin = ( 0.0, 0.0 )
+    { orientation = HexGrid.PointyTop
+    , screenX = 40
+    , screenY = 40
+    , originX = 0.0
+    , originY = 0.0
     }
 
 
 view : Model -> Html.Html msg
-view model =
-    Collage.collage 1000 1000 (List.map (View.hexToForm layout model.map) (Dict.keys model.map) |> List.concat)
-        |> Element.toHtml
+view { grid } =
+    let
+        (HexGrid.HexGrid a dict) =
+            grid
+    in
+        Collage.collage 1000 1000 (List.map (View.hexToForm layout grid) (Dict.keys dict) |> List.concat)
+            |> Element.toHtml
 
 
 main : Program Never Model Msg
