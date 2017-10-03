@@ -4,6 +4,12 @@ import Collage
 import Color
 import HexGrid exposing (HexGrid)
 import Terrain exposing (Terrain)
+import Beast exposing (Beast)
+
+
+beastToForm : HexGrid.Layout -> Beast -> Collage.Form
+beastToForm layout beast =
+    Collage.circle 20 |> Collage.filled Color.white |> Collage.move (HexGrid.hexToPixel layout beast.location)
 
 
 hexToForm : HexGrid.Layout -> HexGrid Terrain -> HexGrid.Point -> List Collage.Form
@@ -25,6 +31,9 @@ hexToForm layout grid point =
                         Terrain.Sea ->
                             Collage.filled Color.blue hexagonShape
 
+                        Terrain.Pasture _ ->
+                            Collage.filled Color.lightBlue hexagonShape
+
                 Nothing ->
                     Collage.filled Color.gray hexagonShape
 
@@ -39,6 +48,9 @@ hexToForm layout grid point =
                             case terrain of
                                 Terrain.Earth ->
                                     Collage.filled Color.lightGreen islandShape
+
+                                Terrain.Pasture _ ->
+                                    Collage.filled Color.green islandShape
 
                                 Terrain.Sea ->
                                     Collage.filled Color.blue islandShape
@@ -94,11 +106,24 @@ hexToForm layout grid point =
                             case maybeTerrain of
                                 Just terrain ->
                                     case terrain of
-                                        Terrain.Earth ->
-                                            Just (Collage.filled Color.lightGreen (Collage.polygon (directionToPolygon direction)))
+                                        Terrain.Sea ->
+                                            Nothing
 
                                         _ ->
+                                            Just (Collage.filled Color.lightGreen (Collage.polygon (directionToPolygon direction)))
+
+                                Nothing ->
+                                    Nothing
+
+                        Terrain.Pasture _ ->
+                            case maybeTerrain of
+                                Just terrain ->
+                                    case terrain of
+                                        Terrain.Sea ->
                                             Nothing
+
+                                        _ ->
+                                            Just (Collage.filled Color.green (Collage.polygon (directionToPolygon direction)))
 
                                 Nothing ->
                                     Nothing
