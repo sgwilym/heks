@@ -32,11 +32,10 @@ freshGrid =
         |> HexGrid.insert ( -4, 0 ) (Terrain.Pasture 2)
         |> HexGrid.insert ( 1, -2 ) (Terrain.Pasture 1)
         |> HexGrid.insert ( 2, 0 ) (Terrain.Pasture 2)
-        |> HexGrid.insert ( 4, 2 ) (Terrain.Pasture 1)
         |> HexGrid.insert ( -3, 1 ) (Terrain.Pasture 3)
-        |> HexGrid.insert ( 2, 4 ) (Terrain.Pasture 1)
         |> HexGrid.insert ( 0, -1 ) (Terrain.Mountain)
-        |> HexGrid.insert ( -2, -2 ) (Terrain.Mountain)
+        |> HexGrid.insert ( -1, 0 ) (Terrain.Mountain)
+        |> HexGrid.insert ( -2, -1 ) (Terrain.Mountain)
         |> HexGrid.insert ( 0, 0 ) Terrain.Earth
 
 

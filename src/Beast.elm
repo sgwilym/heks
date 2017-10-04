@@ -20,35 +20,12 @@ beastTowardsPasture beast grid =
     let
         obstacles : Set HexGrid.Point
         obstacles =
-            HexGrid.filter
-                (\( point, terrain ) ->
-                    case terrain of
-                        Terrain.Sea ->
-                            True
-
-                        Terrain.Mountain ->
-                            True
-
-                        _ ->
-                            False
-                )
-                grid
-                |> List.map Tuple.first
-                |> Set.fromList
+            Set.union
+                (Terrain.pointsOfTerrains Terrain.Sea grid)
+                (Terrain.pointsOfTerrains Terrain.Mountain grid)
 
         viewBlockers =
-            HexGrid.filter
-                (\( point, terrain ) ->
-                    case terrain of
-                        Terrain.Mountain ->
-                            True
-
-                        _ ->
-                            False
-                )
-                grid
-                |> List.map Tuple.first
-                |> Set.fromList
+            Terrain.pointsOfTerrains Terrain.Mountain grid
 
         unseenPoints : Set HexGrid.Point
         unseenPoints =
@@ -56,22 +33,12 @@ beastTowardsPasture beast grid =
 
         pastures : List HexGrid.Point
         pastures =
-            HexGrid.filter
-                (\( point, terrain ) ->
-                    case terrain of
-                        Terrain.Pasture _ ->
-                            True
-
-                        _ ->
-                            False
-                )
-                grid
-                |> List.map Tuple.first
+            Terrain.pointsOfTerrains (Terrain.Pasture 0) grid |> Set.toList
 
         pasturesPointsWithDistances : List ( HexGrid.Point, Int )
         pasturesPointsWithDistances =
             List.map (\point -> ( point, HexGrid.distance beast.location point )) pastures
-                |> List.filter (\( _, distance ) -> distance < InterestingVariables.beastViewRange)
+                |> List.filter (\( _, distance ) -> distance < InterestingVariables.beastViewRange + 1)
                 |> List.filter (\( point, _ ) -> Set.member point unseenPoints == False)
                 |> List.filter
                     (\( point, _ ) ->
