@@ -26,12 +26,33 @@ beastTowardsPasture beast grid =
                         Terrain.Sea ->
                             True
 
+                        Terrain.Mountain ->
+                            True
+
                         _ ->
                             False
                 )
                 grid
                 |> List.map Tuple.first
                 |> Set.fromList
+
+        viewBlockers =
+            HexGrid.filter
+                (\( point, terrain ) ->
+                    case terrain of
+                        Terrain.Mountain ->
+                            True
+
+                        _ ->
+                            False
+                )
+                grid
+                |> List.map Tuple.first
+                |> Set.fromList
+
+        unseenPoints : Set HexGrid.Point
+        unseenPoints =
+            HexGrid.fogOfWar beast.location viewBlockers grid
 
         pastures : List HexGrid.Point
         pastures =
@@ -51,6 +72,7 @@ beastTowardsPasture beast grid =
         pasturesPointsWithDistances =
             List.map (\point -> ( point, HexGrid.distance beast.location point )) pastures
                 |> List.filter (\( _, distance ) -> distance < InterestingVariables.beastViewRange)
+                |> List.filter (\( point, _ ) -> Set.member point unseenPoints == False)
                 |> List.filter
                     (\( point, _ ) ->
                         case HexGrid.countSteps beast.location point obstacles 50 of

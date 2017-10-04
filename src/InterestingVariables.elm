@@ -3,7 +3,7 @@ module InterestingVariables exposing (..)
 
 beastViewRange : number
 beastViewRange =
-    6
+    5
 
 
 defaultLandAvailable : number

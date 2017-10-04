@@ -7,7 +7,39 @@ import Set exposing (Set)
 type Terrain
     = Earth
     | Sea
+    | Mountain
     | Pasture Int
+
+
+terrainIsEqual : Terrain -> Terrain -> Bool
+terrainIsEqual terrain terrain2 =
+    let
+        toInt terr =
+            case terr of
+                Earth ->
+                    0
+
+                Sea ->
+                    1
+
+                Mountain ->
+                    2
+
+                Pasture _ ->
+                    3
+    in
+        (toInt terrain) == (toInt terrain2)
+
+
+pointsOfTerrains : Terrain -> HexGrid Terrain -> Set HexGrid.Point
+pointsOfTerrains terrainPredicate grid =
+    HexGrid.filter
+        (\( point, terrain ) ->
+            terrainIsEqual terrainPredicate terrain
+        )
+        grid
+        |> List.map Tuple.first
+        |> Set.fromList
 
 
 grazedGrid : HexGrid Terrain -> Int -> { location : HexGrid.Point } -> ( HexGrid Terrain, Int )

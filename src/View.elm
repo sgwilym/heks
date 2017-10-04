@@ -7,6 +7,7 @@ import HexGrid exposing (HexGrid)
 import Terrain exposing (Terrain)
 import Beast exposing (Beast)
 import InterestingVariables
+import Set
 
 
 beastToForm : HexGrid.Layout -> Beast -> Collage.Form
@@ -18,7 +19,10 @@ hexToForm : HexGrid.Layout -> HexGrid Terrain -> Beast -> HexGrid.Point -> List 
 hexToForm layout grid beast point =
     let
         isInViewOfBeast =
-            HexGrid.distance beast.location point < InterestingVariables.beastViewRange
+            if HexGrid.distance beast.location point < InterestingVariables.beastViewRange then
+                Set.member point (HexGrid.fogOfWar beast.location (Terrain.pointsOfTerrains Terrain.Mountain grid) grid) == False
+            else
+                False
 
         hexTerrain =
             HexGrid.valueAt point grid
@@ -45,6 +49,9 @@ hexToForm layout grid beast point =
                         Terrain.Pasture _ ->
                             Collage.filled Color.lightBlue hexagonShape
 
+                        Terrain.Mountain ->
+                            Collage.filled Color.gray hexagonShape
+
                 Nothing ->
                     Collage.filled Color.gray hexagonShape
 
@@ -65,6 +72,9 @@ hexToForm layout grid beast point =
 
                                 Terrain.Sea ->
                                     Collage.filled Color.blue islandShape
+
+                                Terrain.Mountain ->
+                                    Collage.filled Color.gray islandShape
 
                         Nothing ->
                             Collage.filled Color.gray islandShape
