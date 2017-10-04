@@ -4,19 +4,14 @@ import HexGrid exposing (HexGrid)
 import Set exposing (Set)
 
 
-type Grassiness
-    = Untouched
-    | Grazed
-
-
 type Terrain
     = Earth
     | Sea
-    | Pasture Grassiness
+    | Pasture Int
 
 
-grazedGrid : HexGrid Terrain -> { location : HexGrid.Point } -> HexGrid Terrain
-grazedGrid grid beast =
+grazedGrid : HexGrid Terrain -> Int -> { location : HexGrid.Point } -> ( HexGrid Terrain, Int )
+grazedGrid grid landAvailable beast =
     let
         pastures : Set HexGrid.Point
         pastures =
@@ -36,25 +31,23 @@ grazedGrid grid beast =
         case Set.member beast.location pastures of
             True ->
                 let
-                    nextTerrain =
+                    ( nextTerrain, nextLandAvailable ) =
                         case HexGrid.valueAt beast.location grid of
                             Just terrain ->
                                 case terrain of
-                                    Pasture grassiness ->
-                                        case grassiness of
-                                            Untouched ->
-                                                Pasture Grazed
-
-                                            Grazed ->
-                                                Earth
+                                    Pasture grassLeft ->
+                                        if grassLeft > 1 then
+                                            ( Pasture (grassLeft - 1), landAvailable + 1 )
+                                        else
+                                            ( Earth, landAvailable + 1 )
 
                                     _ ->
-                                        terrain
+                                        ( terrain, landAvailable )
 
                             Nothing ->
-                                Sea
+                                ( Sea, landAvailable )
                 in
-                    HexGrid.insert beast.location nextTerrain grid
+                    ( HexGrid.insert beast.location nextTerrain grid, nextLandAvailable )
 
             False ->
-                grid
+                ( grid, landAvailable )

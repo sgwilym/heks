@@ -10,6 +10,7 @@ import Mouse
 import HexGrid exposing (HexGrid)
 import Terrain exposing (Terrain)
 import Beast exposing (Beast)
+import InterestingVariables
 
 
 -- MODEL
@@ -24,12 +25,13 @@ type alias Model =
     }
 
 
+freshGrid : HexGrid Terrain
 freshGrid =
     HexGrid.empty 6 Terrain.Sea
-        |> HexGrid.insert ( -3, -2 ) (Terrain.Pasture Terrain.Untouched)
-        |> HexGrid.insert ( 2, 0 ) (Terrain.Pasture Terrain.Untouched)
-        |> HexGrid.insert ( 4, 2 ) (Terrain.Pasture Terrain.Untouched)
-        |> HexGrid.insert ( -3, 1 ) (Terrain.Pasture Terrain.Untouched)
+        |> HexGrid.insert ( -3, -2 ) (Terrain.Pasture 3)
+        |> HexGrid.insert ( 2, 0 ) (Terrain.Pasture 2)
+        |> HexGrid.insert ( 4, 2 ) (Terrain.Pasture 1)
+        |> HexGrid.insert ( -3, 1 ) (Terrain.Pasture 4)
         |> HexGrid.insert ( 0, 0 ) Terrain.Earth
 
 
@@ -41,7 +43,7 @@ init =
     , beast =
         { location = HexGrid.toPoint 0 0
         }
-    , landAvailable = 3
+    , landAvailable = InterestingVariables.defaultLandAvailable
     }
 
 
@@ -65,25 +67,33 @@ update : Msg -> Model -> ( Model, Cmd msg )
 update msg model =
     case msg of
         MoveMsg position ->
-            ( { model
-                | mousePosition = position
-                , grid =
+            let
+                ( newGrid, newLandAvailable ) =
                     if model.mouseIsDown then
-                        updateTerrain position model.grid
+                        updateTerrain position model.grid model.landAvailable
                     else
-                        model.grid
-              }
-            , Cmd.none
-            )
+                        ( model.grid, model.landAvailable )
+            in
+                ( { model
+                    | mousePosition = position
+                    , grid = newGrid
+                    , landAvailable = newLandAvailable
+                  }
+                , Cmd.none
+                )
 
         DownMsg position ->
-            ( { model
-                | mouseIsDown = True
-                , grid = updateTerrain position model.grid
-                , landAvailable = updateLandAvailable model.landAvailable position model.grid
-              }
-            , Cmd.none
-            )
+            let
+                ( newGrid, newLandAvailable ) =
+                    updateTerrain position model.grid model.landAvailable
+            in
+                ( { model
+                    | mouseIsDown = True
+                    , grid = newGrid
+                    , landAvailable = newLandAvailable
+                  }
+                , Cmd.none
+                )
 
         UpMsg position ->
             ( { model | mouseIsDown = False }
@@ -91,55 +101,46 @@ update msg model =
             )
 
         Advance ->
-            ( { model
-                | beast = Beast.beastTowardsPasture model.beast model.grid
-                , grid = Terrain.grazedGrid model.grid model.beast
-              }
-            , Cmd.none
-            )
+            let
+                ( newGrid, newLandAvailable ) =
+                    Terrain.grazedGrid model.grid model.landAvailable model.beast
+            in
+                ( { model
+                    | beast = Beast.beastTowardsPasture model.beast model.grid
+                    , grid = newGrid
+                    , landAvailable = newLandAvailable
+                  }
+                , Cmd.none
+                )
 
         Reset ->
-            ( { model | grid = freshGrid, beast = { location = ( 0, 0 ) }, landAvailable = 3 }
+            ( { model | grid = freshGrid, beast = { location = ( 0, 0 ) }, landAvailable = InterestingVariables.defaultLandAvailable }
             , Cmd.none
             )
 
 
-updateTerrain : Mouse.Position -> HexGrid Terrain -> HexGrid Terrain
-updateTerrain mousePosition grid =
-    let
-        point =
-            HexGrid.pixelToHex layout (remapPosition mousePosition)
-    in
-        case HexGrid.valueAt point grid of
-            Just terrain ->
-                case terrain of
-                    Terrain.Sea ->
-                        HexGrid.insert point Terrain.Earth grid
+updateTerrain : Mouse.Position -> HexGrid Terrain -> Int -> ( HexGrid Terrain, Int )
+updateTerrain mousePosition grid landAvailable =
+    case landAvailable <= 0 of
+        True ->
+            ( grid, 0 )
 
-                    _ ->
-                        grid
+        False ->
+            let
+                point =
+                    HexGrid.pixelToHex layout (remapPosition mousePosition)
+            in
+                case HexGrid.valueAt point grid of
+                    Just terrain ->
+                        case terrain of
+                            Terrain.Sea ->
+                                ( HexGrid.insert point Terrain.Earth grid, landAvailable - 1 )
 
-            Nothing ->
-                grid
+                            _ ->
+                                ( grid, landAvailable )
 
-
-updateLandAvailable : Int -> Mouse.Position -> HexGrid Terrain -> Int
-updateLandAvailable landAvailable mousePosition grid =
-    let
-        point =
-            HexGrid.pixelToHex layout (remapPosition mousePosition)
-    in
-        case HexGrid.valueAt point grid of
-            Just terrain ->
-                case terrain of
-                    Terrain.Sea ->
-                        landAvailable - 1
-
-                    _ ->
-                        landAvailable
-
-            Nothing ->
-                landAvailable
+                    Nothing ->
+                        ( grid, landAvailable )
 
 
 
@@ -163,7 +164,7 @@ remapPosition { x, y } =
             500
 
         originY =
-            500
+            350
 
         newX =
             toFloat x - originX
@@ -191,13 +192,13 @@ view { grid, beast, landAvailable } =
             grid
 
         mapForms =
-            (List.map (View.hexToForm layout grid) (Dict.keys dict) |> List.concat)
+            (List.map (View.hexToForm layout grid beast) (Dict.keys dict) |> List.concat)
 
         beastForm =
             View.beastToForm layout beast
     in
         Html.div []
-            [ Collage.collage 1000 1000 (mapForms ++ [ beastForm ])
+            [ Collage.collage 1000 700 (mapForms ++ [ beastForm ])
                 |> Element.toHtml
             , Html.div [] [ Html.text ("Land available: " ++ toString landAvailable) ]
             , Html.button [ Html.Events.onClick Advance ] [ Html.text "Advance" ]

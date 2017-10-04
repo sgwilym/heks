@@ -1,25 +1,36 @@
 module View exposing (..)
 
 import Collage
+import Text
 import Color
 import HexGrid exposing (HexGrid)
 import Terrain exposing (Terrain)
 import Beast exposing (Beast)
+import InterestingVariables
 
 
 beastToForm : HexGrid.Layout -> Beast -> Collage.Form
 beastToForm layout beast =
-    Collage.circle 20 |> Collage.filled Color.white |> Collage.move (HexGrid.hexToPixel layout beast.location)
+    Collage.circle 5 |> Collage.filled Color.white |> Collage.move (HexGrid.hexToPixel layout beast.location)
 
 
-hexToForm : HexGrid.Layout -> HexGrid Terrain -> HexGrid.Point -> List Collage.Form
-hexToForm layout grid point =
+hexToForm : HexGrid.Layout -> HexGrid Terrain -> Beast -> HexGrid.Point -> List Collage.Form
+hexToForm layout grid beast point =
     let
+        isInViewOfBeast =
+            HexGrid.distance beast.location point < InterestingVariables.beastViewRange
+
         hexTerrain =
             HexGrid.valueAt point grid
 
         hexagonShape =
             Collage.polygon (HexGrid.polygonCorners layout point)
+
+        overlayForm =
+            if isInViewOfBeast then
+                Collage.filled (Color.rgba 0 0 0 0) hexagonShape
+            else
+                Collage.filled (Color.rgba 0 0 0 0.3) hexagonShape
 
         hexagonForm =
             case hexTerrain of
@@ -47,7 +58,7 @@ hexToForm layout grid point =
                         Just terrain ->
                             case terrain of
                                 Terrain.Earth ->
-                                    Collage.filled Color.lightGreen islandShape
+                                    Collage.filled Color.lightBrown islandShape
 
                                 Terrain.Pasture _ ->
                                     Collage.filled Color.green islandShape
@@ -110,7 +121,7 @@ hexToForm layout grid point =
                                             Nothing
 
                                         _ ->
-                                            Just (Collage.filled Color.lightGreen (Collage.polygon (directionToPolygon direction)))
+                                            Just (Collage.filled Color.lightBrown (Collage.polygon (directionToPolygon direction)))
 
                                 Nothing ->
                                     Nothing
@@ -145,5 +156,18 @@ hexToForm layout grid point =
             List.filterMap
                 neighbourToMaybeForm
                 directionPairs
+
+        numberForms =
+            case hexTerrain of
+                Just terrain ->
+                    case terrain of
+                        Terrain.Pasture grassiness ->
+                            [ Text.fromString (toString grassiness) |> Collage.text |> Collage.move (HexGrid.hexToPixel layout point) |> Collage.moveY 10.0 ]
+
+                        _ ->
+                            []
+
+                Nothing ->
+                    []
     in
-        hexagonForm :: (islandForm :: neighbourForms)
+        hexagonForm :: (islandForm :: neighbourForms) ++ [ overlayForm ] ++ numberForms
