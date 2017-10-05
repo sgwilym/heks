@@ -13,11 +13,6 @@ cellWidth =
     25
 
 
-mapSize : Int
-mapSize =
-    10
-
-
 beastViewRange : number
 beastViewRange =
     5
@@ -30,8 +25,8 @@ defaultLandAvailable =
 
 spec : Terrain.TerrainSpec
 spec =
-    { earth = 4
-    , sea = 20
-    , mountain = 1
+    { earth = 5
+    , sea = 2
+    , mountain = 10
     , pasture = 2
     }

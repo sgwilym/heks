@@ -5,6 +5,7 @@ import Element
 import View
 import Html
 import Html.Events
+import Html.Attributes
 import Mouse
 import HexGrid exposing (HexGrid)
 import Terrain exposing (Terrain)
@@ -25,12 +26,15 @@ type alias Model =
     , beast : Beast
     , landAvailable : Int
     , modifier : Bool
+    , specs :
+        { mapSize : Int
+        }
     }
 
 
 freshGrid : HexGrid Terrain
 freshGrid =
-    HexGrid.empty InterestingVariables.mapSize Terrain.Sea
+    HexGrid.empty 10 Terrain.Sea
 
 
 init : Model
@@ -43,6 +47,7 @@ init =
         }
     , landAvailable = InterestingVariables.defaultLandAvailable
     , modifier = False
+    , specs = { mapSize = 10 }
     }
 
 
@@ -55,11 +60,11 @@ type Msg
     | DownMsg Mouse.Position
     | UpMsg Mouse.Position
     | Advance
-    | Reset
     | Generate
     | NewGrid (HexGrid Terrain)
     | KeyUp Keyboard.KeyCode
     | KeyDown Keyboard.KeyCode
+    | ChangeMapSize String
 
 
 
@@ -116,13 +121,8 @@ update msg model =
                 , Cmd.none
                 )
 
-        Reset ->
-            ( { model | grid = freshGrid, beast = { location = ( 0, 0 ) }, landAvailable = InterestingVariables.defaultLandAvailable }
-            , Cmd.none
-            )
-
         Generate ->
-            ( model, Random.generate NewGrid (Terrain.randomGrid InterestingVariables.spec InterestingVariables.mapSize) )
+            ( model, Random.generate NewGrid (Terrain.randomGrid InterestingVariables.spec model.specs.mapSize) )
 
         NewGrid newGrid ->
             ( { model | grid = newGrid, beast = { location = ( 0, 0 ) }, landAvailable = InterestingVariables.defaultLandAvailable }, Cmd.none )
@@ -138,6 +138,13 @@ update msg model =
                 ( { model | modifier = False }, Cmd.none )
             else
                 ( model, Cmd.none )
+
+        ChangeMapSize value ->
+            let
+                { specs } =
+                    model
+            in
+                ( { model | specs = { specs | mapSize = Result.withDefault 0 (String.toInt value) } }, Cmd.none )
 
 
 updateTerrain : Mouse.Position -> HexGrid Terrain -> Int -> Bool -> ( HexGrid Terrain, Int )
@@ -222,7 +229,7 @@ layout =
 
 
 view : Model -> Html.Html Msg
-view { grid, beast, landAvailable } =
+view { grid, beast, landAvailable, specs } =
     let
         mapForms =
             View.gridToForms layout grid beast
@@ -233,9 +240,20 @@ view { grid, beast, landAvailable } =
         Html.div []
             [ Collage.collage 1000 700 (mapForms ++ [ beastForm ])
                 |> Element.toHtml
-            , Html.div [] [ Html.text ("Land available: " ++ toString landAvailable) ]
-            , Html.button [ Html.Events.onClick Generate ] [ Html.text "Generate" ]
-            , Html.button [ Html.Events.onClick Reset ] [ Html.text "Reset" ]
+            , Html.div
+                []
+                [ Html.text ("Land available: " ++ toString landAvailable) ]
+            , Html.button
+                [ Html.Events.onClick Generate ]
+                [ Html.text "Regenerate!" ]
+            , Html.input
+                [ Html.Attributes.type_ "range"
+                , Html.Attributes.max "10"
+                , Html.Attributes.min "1"
+                , Html.Attributes.value (toString specs.mapSize)
+                , Html.Events.onInput ChangeMapSize
+                ]
+                []
             ]
 
 
