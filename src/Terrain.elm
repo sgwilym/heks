@@ -2,6 +2,8 @@ module Terrain exposing (..)
 
 import HexGrid exposing (HexGrid)
 import Set exposing (Set)
+import Random
+import Dict
 
 
 type Terrain
@@ -9,6 +11,79 @@ type Terrain
     | Sea
     | Mountain
     | Pasture Int
+
+
+type alias TerrainSpec =
+    { earth : Int
+    , sea : Int
+    , mountain : Int
+    , pasture : Int
+    }
+
+
+randomTerrain : TerrainSpec -> Random.Generator Terrain
+randomTerrain spec =
+    let
+        total =
+            spec.earth + spec.sea + spec.mountain + spec.pasture
+
+        terrainFromInt : Int -> Terrain
+        terrainFromInt int =
+            let
+                earthUpper =
+                    spec.earth
+
+                seaUpper =
+                    earthUpper + spec.sea
+
+                mountainUpper =
+                    seaUpper + spec.mountain
+
+                pastureUpper =
+                    mountainUpper + spec.pasture
+            in
+                if int <= earthUpper then
+                    Earth
+                else if int > earthUpper && int <= seaUpper then
+                    Sea
+                else if int > seaUpper && int <= mountainUpper then
+                    Mountain
+                else
+                    Pasture 1
+    in
+        Random.map (terrainFromInt) (Random.int 0 total)
+
+
+randomTerrainList : TerrainSpec -> Int -> Random.Generator (List Terrain)
+randomTerrainList spec cellNumber =
+    let
+        total =
+            spec.earth + spec.sea + spec.mountain + spec.pasture
+    in
+        Random.list cellNumber (randomTerrain spec)
+
+
+randomGrid : TerrainSpec -> Int -> Random.Generator (HexGrid Terrain)
+randomGrid spec radius =
+    let
+        (HexGrid.HexGrid gridRadius dict) =
+            HexGrid.empty radius Sea
+
+        gridSize =
+            Dict.size dict
+
+        points =
+            Dict.keys dict
+
+        fromList terrains =
+            let
+                zippedPointsAndTerrains =
+                    List.map2 (,) points terrains
+            in
+                HexGrid.fromList radius Sea zippedPointsAndTerrains
+                    |> HexGrid.insert ( 0, 0 ) Earth
+    in
+        Random.map (fromList) (randomTerrainList spec gridSize)
 
 
 terrainIsEqual : Terrain -> Terrain -> Bool

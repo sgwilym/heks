@@ -34,7 +34,7 @@ hexToForm layout grid beast point =
             if isInViewOfBeast then
                 Collage.filled (Color.rgba 0 0 0 0) hexagonShape
             else
-                Collage.filled (Color.rgba 0 0 0 0.3) hexagonShape
+                Collage.filled (Color.rgba 0 0 0 0.5) hexagonShape
 
         hexagonForm =
             case hexTerrain of

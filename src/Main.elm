@@ -11,6 +11,8 @@ import HexGrid exposing (HexGrid)
 import Terrain exposing (Terrain)
 import Beast exposing (Beast)
 import InterestingVariables
+import Time
+import Random
 
 
 -- MODEL
@@ -28,15 +30,6 @@ type alias Model =
 freshGrid : HexGrid Terrain
 freshGrid =
     HexGrid.empty 6 Terrain.Sea
-        |> HexGrid.insert ( -3, -2 ) (Terrain.Pasture 1)
-        |> HexGrid.insert ( -4, 0 ) (Terrain.Pasture 2)
-        |> HexGrid.insert ( 1, -2 ) (Terrain.Pasture 1)
-        |> HexGrid.insert ( 2, 0 ) (Terrain.Pasture 2)
-        |> HexGrid.insert ( -3, 1 ) (Terrain.Pasture 3)
-        |> HexGrid.insert ( 0, -1 ) (Terrain.Mountain)
-        |> HexGrid.insert ( -1, 0 ) (Terrain.Mountain)
-        |> HexGrid.insert ( -2, -1 ) (Terrain.Mountain)
-        |> HexGrid.insert ( 0, 0 ) Terrain.Earth
 
 
 init : Model
@@ -61,13 +54,15 @@ type Msg
     | UpMsg Mouse.Position
     | Advance
     | Reset
+    | Generate
+    | NewGrid (HexGrid Terrain)
 
 
 
 -- UPDATE
 
 
-update : Msg -> Model -> ( Model, Cmd msg )
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         MoveMsg position ->
@@ -122,6 +117,12 @@ update msg model =
             , Cmd.none
             )
 
+        Generate ->
+            ( model, Random.generate NewGrid (Terrain.randomGrid InterestingVariables.spec 6) )
+
+        NewGrid newGrid ->
+            ( { model | grid = newGrid, beast = { location = ( 0, 0 ) }, landAvailable = InterestingVariables.defaultLandAvailable }, Cmd.none )
+
 
 updateTerrain : Mouse.Position -> HexGrid Terrain -> Int -> ( HexGrid Terrain, Int )
 updateTerrain mousePosition grid landAvailable =
@@ -154,7 +155,7 @@ updateTerrain mousePosition grid landAvailable =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ Mouse.moves MoveMsg, Mouse.downs DownMsg, Mouse.ups UpMsg ]
+        [ Mouse.moves MoveMsg, Mouse.downs DownMsg, Mouse.ups UpMsg, Time.every Time.second (\_ -> Advance) ]
 
 
 
@@ -205,7 +206,7 @@ view { grid, beast, landAvailable } =
             [ Collage.collage 1000 700 (mapForms ++ [ beastForm ])
                 |> Element.toHtml
             , Html.div [] [ Html.text ("Land available: " ++ toString landAvailable) ]
-            , Html.button [ Html.Events.onClick Advance ] [ Html.text "Advance" ]
+            , Html.button [ Html.Events.onClick Generate ] [ Html.text "Generate" ]
             , Html.button [ Html.Events.onClick Reset ] [ Html.text "Reset" ]
             ]
 
