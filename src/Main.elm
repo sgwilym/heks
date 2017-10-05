@@ -5,7 +5,6 @@ import Element
 import View
 import Html
 import Html.Events
-import Dict
 import Mouse
 import HexGrid exposing (HexGrid)
 import Terrain exposing (Terrain)
@@ -13,6 +12,7 @@ import Beast exposing (Beast)
 import InterestingVariables
 import Time
 import Random
+import Keyboard
 
 
 -- MODEL
@@ -24,12 +24,13 @@ type alias Model =
     , grid : HexGrid Terrain
     , beast : Beast
     , landAvailable : Int
+    , modifier : Bool
     }
 
 
 freshGrid : HexGrid Terrain
 freshGrid =
-    HexGrid.empty 6 Terrain.Sea
+    HexGrid.empty InterestingVariables.mapSize Terrain.Sea
 
 
 init : Model
@@ -41,6 +42,7 @@ init =
         { location = HexGrid.toPoint 0 0
         }
     , landAvailable = InterestingVariables.defaultLandAvailable
+    , modifier = False
     }
 
 
@@ -56,6 +58,8 @@ type Msg
     | Reset
     | Generate
     | NewGrid (HexGrid Terrain)
+    | KeyUp Keyboard.KeyCode
+    | KeyDown Keyboard.KeyCode
 
 
 
@@ -69,7 +73,7 @@ update msg model =
             let
                 ( newGrid, newLandAvailable ) =
                     if model.mouseIsDown then
-                        updateTerrain position model.grid model.landAvailable
+                        updateTerrain position model.grid model.landAvailable model.modifier
                     else
                         ( model.grid, model.landAvailable )
             in
@@ -84,7 +88,7 @@ update msg model =
         DownMsg position ->
             let
                 ( newGrid, newLandAvailable ) =
-                    updateTerrain position model.grid model.landAvailable
+                    updateTerrain position model.grid model.landAvailable model.modifier
             in
                 ( { model
                     | mouseIsDown = True
@@ -118,14 +122,26 @@ update msg model =
             )
 
         Generate ->
-            ( model, Random.generate NewGrid (Terrain.randomGrid InterestingVariables.spec 6) )
+            ( model, Random.generate NewGrid (Terrain.randomGrid InterestingVariables.spec InterestingVariables.mapSize) )
 
         NewGrid newGrid ->
             ( { model | grid = newGrid, beast = { location = ( 0, 0 ) }, landAvailable = InterestingVariables.defaultLandAvailable }, Cmd.none )
 
+        KeyDown code ->
+            if code == 18 then
+                ( { model | modifier = True }, Cmd.none )
+            else
+                ( model, Cmd.none )
 
-updateTerrain : Mouse.Position -> HexGrid Terrain -> Int -> ( HexGrid Terrain, Int )
-updateTerrain mousePosition grid landAvailable =
+        KeyUp code ->
+            if code == 18 then
+                ( { model | modifier = False }, Cmd.none )
+            else
+                ( model, Cmd.none )
+
+
+updateTerrain : Mouse.Position -> HexGrid Terrain -> Int -> Bool -> ( HexGrid Terrain, Int )
+updateTerrain mousePosition grid landAvailable modifier =
     case landAvailable <= 0 of
         True ->
             ( grid, 0 )
@@ -139,10 +155,19 @@ updateTerrain mousePosition grid landAvailable =
                     Just terrain ->
                         case terrain of
                             Terrain.Sea ->
-                                ( HexGrid.insert point Terrain.Earth grid, landAvailable - 1 )
+                                if modifier then
+                                    ( grid, landAvailable )
+                                else
+                                    ( HexGrid.insert point Terrain.Earth grid, landAvailable - 1 )
+
+                            Terrain.Pasture grassAmount ->
+                                ( grid, landAvailable )
 
                             _ ->
-                                ( grid, landAvailable )
+                                if modifier then
+                                    ( HexGrid.insert point Terrain.Sea grid, landAvailable + 1 )
+                                else
+                                    ( grid, landAvailable )
 
                     Nothing ->
                         ( grid, landAvailable )
@@ -155,7 +180,13 @@ updateTerrain mousePosition grid landAvailable =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ Mouse.moves MoveMsg, Mouse.downs DownMsg, Mouse.ups UpMsg, Time.every Time.second (\_ -> Advance) ]
+        [ Mouse.moves MoveMsg
+        , Mouse.downs DownMsg
+        , Mouse.ups UpMsg
+        , Time.every Time.second (\_ -> Advance)
+        , Keyboard.downs KeyDown
+        , Keyboard.ups KeyUp
+        ]
 
 
 
@@ -183,8 +214,8 @@ remapPosition { x, y } =
 layout : HexGrid.Layout
 layout =
     { orientation = HexGrid.PointyTop
-    , screenX = 40
-    , screenY = 30
+    , screenX = InterestingVariables.cellWidth
+    , screenY = InterestingVariables.cellHeight
     , originX = 0.0
     , originY = 0.0
     }
@@ -193,11 +224,8 @@ layout =
 view : Model -> Html.Html Msg
 view { grid, beast, landAvailable } =
     let
-        (HexGrid.HexGrid a dict) =
-            grid
-
         mapForms =
-            (List.map (View.hexToForm layout grid beast) (Dict.keys dict) |> List.concat)
+            View.gridToForms layout grid beast
 
         beastForm =
             View.beastToForm layout beast

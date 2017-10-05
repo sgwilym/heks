@@ -18,38 +18,42 @@ type alias Beast =
 beastTowardsPasture : Beast -> HexGrid Terrain -> Beast
 beastTowardsPasture beast grid =
     let
+        pointsInViewRange =
+            HexGrid.range InterestingVariables.beastViewRange beast.location
+                |> Set.fromList
+
         obstacles : Set HexGrid.Point
         obstacles =
             Set.union
                 (Terrain.pointsOfTerrains Terrain.Sea grid)
                 (Terrain.pointsOfTerrains Terrain.Mountain grid)
 
+        viewBlockers : Set HexGrid.Point
         viewBlockers =
             Terrain.pointsOfTerrains Terrain.Mountain grid
+                |> Set.intersect pointsInViewRange
 
         unseenPoints : Set HexGrid.Point
         unseenPoints =
             HexGrid.fogOfWar beast.location viewBlockers grid
 
-        pastures : List HexGrid.Point
-        pastures =
-            Terrain.pointsOfTerrains (Terrain.Pasture 0) grid |> Set.toList
+        pasturesInRange : Set HexGrid.Point
+        pasturesInRange =
+            Terrain.pointsOfTerrains (Terrain.Pasture 0) grid |> Set.intersect pointsInViewRange
 
         pasturesPointsWithDistances : List ( HexGrid.Point, Int )
         pasturesPointsWithDistances =
-            List.map (\point -> ( point, HexGrid.distance beast.location point )) pastures
-                |> List.filter (\( _, distance ) -> distance < InterestingVariables.beastViewRange + 1)
-                |> List.filter (\( point, _ ) -> Set.member point unseenPoints == False)
+            List.map (\point -> ( point, HexGrid.distance beast.location point )) (Set.toList pasturesInRange)
                 |> List.filter
                     (\( point, _ ) ->
-                        case HexGrid.countSteps beast.location point obstacles 50 of
+                        case HexGrid.countSteps beast.location point obstacles 10 of
                             Just steps ->
                                 True
 
                             Nothing ->
                                 False
                     )
-                |> List.sortBy (\( _, distance ) -> distance)
+                |> List.sortBy (Tuple.second)
 
         getNextPoint : HexGrid.Point -> HexGrid.Point
         getNextPoint destination =
