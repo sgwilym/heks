@@ -139,8 +139,14 @@ view { grid } =
     let
         (HexGrid.HexGrid a dict) =
             grid
+
+        hexForms =
+            (List.map (View.hexToForm layout grid) (Dict.keys dict) |> List.concat)
+
+        labelForms =
+            View.gridToHintLabels layout grid
     in
-        Collage.collage 1000 1000 (List.map (View.hexToForm layout grid) (Dict.keys dict) |> List.concat)
+        Collage.collage 1000 1000 (hexForms ++ labelForms)
             |> Element.toHtml
 
 

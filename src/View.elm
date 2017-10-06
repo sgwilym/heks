@@ -1,9 +1,93 @@
 module View exposing (..)
 
 import Collage
+import Text
 import Color
 import HexGrid exposing (HexGrid)
 import Terrain exposing (Terrain)
+import CrossGrid
+import Cons
+
+
+gridToHintLabels : HexGrid.Layout -> HexGrid Terrain -> List Collage.Form
+gridToHintLabels layout grid =
+    let
+        ( xRows, zRows ) =
+            CrossGrid.rows grid
+    in
+        List.map (rowToHintLabelForm layout CrossGrid.X) xRows
+            ++ List.map (rowToHintLabelForm layout CrossGrid.Z) zRows
+
+
+rowToHintLabelForm : HexGrid.Layout -> CrossGrid.Axis -> CrossGrid.Row Terrain -> Collage.Form
+rowToHintLabelForm layout axis row =
+    let
+        firstHex =
+            let
+                sorted =
+                    Cons.sortBy
+                        (\( ( x, z ), _ ) ->
+                            case axis of
+                                CrossGrid.X ->
+                                    z
+
+                                CrossGrid.Z ->
+                                    x
+                        )
+                        row
+
+                first =
+                    case axis of
+                        CrossGrid.Z ->
+                            Cons.head sorted
+
+                        CrossGrid.X ->
+                            Cons.reverse sorted |> Cons.head
+            in
+                first
+                    |> Tuple.first
+
+        hintText =
+            CrossGrid.hint row
+                (\terrain ->
+                    case terrain of
+                        Terrain.Earth ->
+                            True
+
+                        _ ->
+                            False
+                )
+                |> List.map toString
+                |> String.join " "
+
+        displacement =
+            case axis of
+                CrossGrid.X ->
+                    (HexGrid.hexToPixel layout (HexGrid.neighbor 5 firstHex))
+
+                CrossGrid.Z ->
+                    (HexGrid.hexToPixel layout (HexGrid.neighbor 3 firstHex))
+
+        rotation =
+            case axis of
+                CrossGrid.X ->
+                    degrees 60
+
+                CrossGrid.Z ->
+                    degrees 0
+
+        colour =
+            case axis of
+                CrossGrid.X ->
+                    Color.blue
+
+                CrossGrid.Z ->
+                    Color.green
+
+        hintForm =
+            Text.fromString hintText |> Text.color colour |> Text.bold |> Collage.text |> Collage.move displacement |> Collage.rotate rotation
+    in
+        hintForm
 
 
 hexToForm : HexGrid.Layout -> HexGrid Terrain -> HexGrid.Point -> List Collage.Form
