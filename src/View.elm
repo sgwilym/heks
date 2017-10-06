@@ -85,7 +85,7 @@ rowToHintLabelForm layout axis row =
                     Color.green
 
         hintForm =
-            Text.fromString hintText |> Text.color colour |> Text.bold |> Collage.text |> Collage.move displacement |> Collage.rotate rotation
+            Text.fromString hintText |> Text.color colour |> Text.bold |> Text.height 20 |> Collage.text |> Collage.move displacement |> Collage.rotate rotation
     in
         hintForm
 
