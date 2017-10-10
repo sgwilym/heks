@@ -27,6 +27,12 @@ randomTerrain spec =
         total =
             spec.earth + spec.sea + spec.mountain + spec.pasture
 
+        oneOrThree int =
+            if int % 2 == 0 then
+                1
+            else
+                3
+
         terrainFromInt : Int -> Terrain
         terrainFromInt int =
             let
@@ -49,7 +55,7 @@ randomTerrain spec =
                 else if int > seaUpper && int <= mountainUpper then
                     Mountain
                 else
-                    Pasture 1
+                    Pasture (oneOrThree int)
     in
         Random.map (terrainFromInt) (Random.int 0 total)
 

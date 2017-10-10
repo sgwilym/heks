@@ -25,8 +25,8 @@ defaultLandAvailable =
 
 spec : Terrain.TerrainSpec
 spec =
-    { earth = 5
-    , sea = 2
-    , mountain = 10
+    { earth = 4
+    , sea = 40
+    , mountain = 1
     , pasture = 2
     }
