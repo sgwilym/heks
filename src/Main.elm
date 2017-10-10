@@ -4,28 +4,34 @@ import Collage
 import Element
 import View
 import Html
-import Dict
+import Html.Events
 import Mouse
 import HexGrid exposing (HexGrid)
 import Terrain exposing (Terrain)
+import Puzzle exposing (Puzzle)
+import Random
+import Keyboard
 
 
 -- MODEL
 
 
+puzzleRadius : number
+puzzleRadius =
+    4
+
+
 type alias Model =
-    { mousePosition : { x : Int, y : Int }
-    , mouseIsDown : Bool
-    , grid : HexGrid Terrain
+    { puzzle : Puzzle
+    , isModifierKeyDown : Bool
     }
 
 
 init : Model
 init =
-    { mousePosition = { x = 0, y = 0 }
-    , mouseIsDown = False
-    , grid =
-        HexGrid.empty 6 Terrain.Sea
+    { puzzle =
+        Puzzle.Puzzle (HexGrid.empty puzzleRadius Terrain.Sea) (HexGrid.empty puzzleRadius Puzzle.NoGuess)
+    , isModifierKeyDown = False
     }
 
 
@@ -34,45 +40,71 @@ init =
 
 
 type Msg
-    = MoveMsg Mouse.Position
-    | DownMsg Mouse.Position
-    | UpMsg Mouse.Position
+    = ClickMsg Mouse.Position
+    | Generate
+    | NewPuzzle (Puzzle.Puzzle)
+    | KeyDown Keyboard.KeyCode
+    | KeyUp Keyboard.KeyCode
 
 
 
 -- UPDATE
 
 
-update : Msg -> Model -> ( Model, Cmd msg )
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        MoveMsg position ->
-            ( { mousePosition = position
-              , mouseIsDown = model.mouseIsDown
-              , grid =
-                    if model.mouseIsDown then
-                        updateTerrain position model.grid
-                    else
-                        model.grid
+        ClickMsg mousePosition ->
+            ( { model
+                | puzzle = toggleCell mousePosition model.isModifierKeyDown model.puzzle
               }
             , Cmd.none
             )
 
-        DownMsg position ->
-            ( { mousePosition = model.mousePosition
-              , mouseIsDown = True
-              , grid = updateTerrain position model.grid
-              }
-            , Cmd.none
-            )
+        KeyDown code ->
+            if code == 18 then
+                ( { model | isModifierKeyDown = True }, Cmd.none )
+            else
+                ( model, Cmd.none )
 
-        UpMsg position ->
-            ( { mousePosition = model.mousePosition
-              , mouseIsDown = False
-              , grid = model.grid
-              }
-            , Cmd.none
-            )
+        KeyUp code ->
+            if code == 18 then
+                ( { model | isModifierKeyDown = False }, Cmd.none )
+            else
+                ( model, Cmd.none )
+
+        Generate ->
+            ( model, Random.generate NewPuzzle (Puzzle.randomPuzzle puzzleRadius) )
+
+        NewPuzzle puzzle ->
+            ( { model | puzzle = puzzle }, Cmd.none )
+
+
+toggleCell : Mouse.Position -> Bool -> Puzzle.Puzzle -> Puzzle.Puzzle
+toggleCell mousePosition modifier (Puzzle.Puzzle grid guesses) =
+    let
+        point =
+            HexGrid.pixelToHex layout (remapPosition mousePosition)
+    in
+        case HexGrid.valueAt point grid of
+            Just _ ->
+                case HexGrid.valueAt point guesses of
+                    Just guess ->
+                        case guess of
+                            Puzzle.NoGuess ->
+                                if modifier then
+                                    Puzzle.Puzzle grid (HexGrid.insert point Puzzle.Cross guesses)
+                                else
+                                    Puzzle.Puzzle grid (HexGrid.insert point Puzzle.Filled guesses)
+
+                            _ ->
+                                Puzzle.Puzzle grid (HexGrid.insert point Puzzle.NoGuess guesses)
+
+                    Nothing ->
+                        Puzzle.Puzzle grid guesses
+
+            Nothing ->
+                Puzzle.Puzzle grid guesses
 
 
 updateTerrain : Mouse.Position -> HexGrid Terrain -> HexGrid Terrain
@@ -99,7 +131,10 @@ updateTerrain mousePosition grid =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ Mouse.moves MoveMsg, Mouse.downs DownMsg, Mouse.ups UpMsg ]
+        [ Mouse.clicks ClickMsg
+        , Keyboard.downs KeyDown
+        , Keyboard.ups KeyUp
+        ]
 
 
 
@@ -134,20 +169,28 @@ layout =
     }
 
 
-view : Model -> Html.Html msg
-view { grid } =
+view : Model -> Html.Html Msg
+view { puzzle } =
     let
-        (HexGrid.HexGrid a dict) =
-            grid
+        (Puzzle.Puzzle grid guesses) =
+            puzzle
 
-        hexForms =
-            (List.map (View.hexToForm layout grid) (Dict.keys dict) |> List.concat)
+        gridForms =
+            View.gridToForms layout grid
+
+        guessForms =
+            View.guessesToForms layout guesses
 
         labelForms =
             View.gridToHintLabels layout grid
     in
-        Collage.collage 1000 1000 (hexForms ++ labelForms)
-            |> Element.toHtml
+        Html.div []
+            [ Collage.collage 1000 1000 (gridForms ++ guessForms ++ labelForms)
+                |> Element.toHtml
+            , Html.button
+                [ Html.Events.onClick Generate ]
+                [ Html.text "Regenerate!" ]
+            ]
 
 
 main : Program Never Model Msg

@@ -5,8 +5,11 @@ import Text
 import Color
 import HexGrid exposing (HexGrid)
 import Terrain exposing (Terrain)
+import Puzzle
 import CrossGrid
 import Cons
+import Dict
+import Set exposing (Set)
 
 
 gridToHintLabels : HexGrid.Layout -> HexGrid Terrain -> List Collage.Form
@@ -90,27 +93,64 @@ rowToHintLabelForm layout axis row =
         hintForm
 
 
-hexToForm : HexGrid.Layout -> HexGrid Terrain -> HexGrid.Point -> List Collage.Form
-hexToForm layout grid point =
-    let
-        hexTerrain =
-            HexGrid.valueAt point grid
+gridToForms : HexGrid.Layout -> HexGrid Terrain -> List Collage.Form
+gridToForms layout (HexGrid.HexGrid a dict) =
+    List.map (pointToForm layout Terrain.Sea) (Dict.keys dict) |> List.concat
 
+
+guessesToForms : HexGrid.Layout -> HexGrid Puzzle.Guess -> List Collage.Form
+guessesToForms layout (HexGrid.HexGrid radius dict) =
+    Dict.map
+        (\point guess ->
+            case guess of
+                Puzzle.Filled ->
+                    filledToForm layout point
+
+                Puzzle.Cross ->
+                    crossToForm layout point
+
+                Puzzle.NoGuess ->
+                    []
+        )
+        dict
+        |> Dict.values
+        |> List.concat
+
+
+filledToForm : HexGrid.Layout -> HexGrid.Point -> List Collage.Form
+filledToForm layout point =
+    pointToForm layout Terrain.Earth point
+
+
+crossToForm : HexGrid.Layout -> HexGrid.Point -> List Collage.Form
+crossToForm layout point =
+    let
+        armForm =
+            Collage.rect (layout.screenX * 0.8) (layout.screenX * 0.2)
+                |> Collage.filled Color.lightRed
+
+        crossForms =
+            [ Collage.rotate (degrees 45) armForm
+            , Collage.rotate (degrees -45) armForm
+            ]
+                |> List.map (Collage.move (HexGrid.hexToPixel layout point))
+    in
+        crossForms
+
+
+pointToForm : HexGrid.Layout -> Terrain.Terrain -> HexGrid.Point -> List Collage.Form
+pointToForm layout terrain point =
+    let
         hexagonShape =
             Collage.polygon (HexGrid.polygonCorners layout point)
 
         hexagonForm =
-            case hexTerrain of
-                Just terrain ->
-                    case terrain of
-                        Terrain.Earth ->
-                            Collage.filled Color.lightGreen hexagonShape
+            case terrain of
+                Terrain.Earth ->
+                    Collage.filled Color.lightGreen hexagonShape
 
-                        Terrain.Sea ->
-                            Collage.filled Color.blue hexagonShape
-
-                Nothing ->
-                    Collage.filled Color.gray hexagonShape
+                Terrain.Sea ->
+                    Collage.filled Color.blue hexagonShape
 
         ( x, z ) =
             point
