@@ -9,21 +9,29 @@ import Puzzle
 import CrossGrid
 import Cons
 import Dict
-import Set exposing (Set)
 
 
-gridToHintLabels : HexGrid.Layout -> HexGrid Terrain -> List Collage.Form
-gridToHintLabels layout grid =
+gridToHintLabels : HexGrid.Layout -> HexGrid Terrain -> HexGrid Puzzle.Guess -> List Collage.Form
+gridToHintLabels layout grid guesses =
     let
         ( xRows, zRows ) =
             CrossGrid.rows grid
+
+        ( gxRows, gzRows ) =
+            CrossGrid.rows guesses
+
+        txRows =
+            List.map2 (,) xRows gxRows
+
+        tzRows =
+            List.map2 (,) zRows gzRows
     in
-        List.map (rowToHintLabelForm layout CrossGrid.X) xRows
-            ++ List.map (rowToHintLabelForm layout CrossGrid.Z) zRows
+        List.map (rowToHintLabelForm layout CrossGrid.X) txRows
+            ++ List.map (rowToHintLabelForm layout CrossGrid.Z) tzRows
 
 
-rowToHintLabelForm : HexGrid.Layout -> CrossGrid.Axis -> CrossGrid.Row Terrain -> Collage.Form
-rowToHintLabelForm layout axis row =
+rowToHintLabelForm : HexGrid.Layout -> CrossGrid.Axis -> ( CrossGrid.Row Terrain, CrossGrid.Row Puzzle.Guess ) -> Collage.Form
+rowToHintLabelForm layout axis ( solutionRow, guessRow ) =
     let
         firstHex =
             let
@@ -37,7 +45,7 @@ rowToHintLabelForm layout axis row =
                                 CrossGrid.Z ->
                                     x
                         )
-                        row
+                        solutionRow
 
                 first =
                     case axis of
@@ -51,7 +59,9 @@ rowToHintLabelForm layout axis row =
                     |> Tuple.first
 
         hintText =
-            CrossGrid.hint row
+            CrossGrid.hint
+                solutionRow
+                guessRow
                 (\terrain ->
                     case terrain of
                         Terrain.Earth ->
@@ -60,7 +70,13 @@ rowToHintLabelForm layout axis row =
                         _ ->
                             False
                 )
-                |> List.map toString
+                |> List.map
+                    (\( hintNumber, isSatisfied ) ->
+                        if isSatisfied then
+                            "(" ++ (toString hintNumber) ++ ")"
+                        else
+                            toString hintNumber
+                    )
                 |> String.join " "
 
         displacement =
@@ -79,16 +95,8 @@ rowToHintLabelForm layout axis row =
                 CrossGrid.Z ->
                     degrees 0
 
-        colour =
-            case axis of
-                CrossGrid.X ->
-                    Color.blue
-
-                CrossGrid.Z ->
-                    Color.green
-
         hintForm =
-            Text.fromString hintText |> Text.color colour |> Text.bold |> Text.height 20 |> Collage.text |> Collage.move displacement |> Collage.rotate rotation
+            Text.fromString hintText |> Text.color Color.black |> Text.bold |> Text.height 20 |> Collage.text |> Collage.move displacement |> Collage.rotate rotation
     in
         hintForm
 

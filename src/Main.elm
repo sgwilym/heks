@@ -182,14 +182,14 @@ view { puzzle } =
             View.guessesToForms layout guesses
 
         labelForms =
-            View.gridToHintLabels layout grid
+            View.gridToHintLabels layout grid guesses
     in
         Html.div []
             [ Collage.collage 1000 1000 (gridForms ++ guessForms ++ labelForms)
                 |> Element.toHtml
             , Html.button
                 [ Html.Events.onClick Generate ]
-                [ Html.text "Regenerate!" ]
+                [ Html.text "New puzzle!" ]
             ]
 
 

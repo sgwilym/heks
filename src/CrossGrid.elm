@@ -3,10 +3,11 @@ module CrossGrid exposing (..)
 import HexGrid exposing (HexGrid)
 import Cons exposing (Cons, cons, uncons)
 import Set exposing (Set)
+import Puzzle
 
 
 type alias Hint =
-    List Int
+    List ( Int, Bool )
 
 
 type Axis
@@ -59,26 +60,65 @@ rowAt grid axis rowNumber =
                 Just (cons head tail)
 
 
-hint : Row a -> (a -> Bool) -> Hint
-hint row isFilled =
-    (Cons.foldl
-        (\( point, item ) hint ->
-            let
-                ( head, tail ) =
-                    uncons hint
-            in
-                if isFilled item then
-                    case head of
-                        Just number ->
-                            cons (Just (number + 1)) tail
 
-                        Nothing ->
-                            cons (Just (1)) (head :: tail)
-                else
-                    cons Nothing (head :: tail)
-        )
-        (cons Nothing [])
-        row
-    )
-        |> Cons.filterMap identity
-        |> List.reverse
+{--
+This needs to be rewritten so that guesses get their own groupfold that is aware of empty cells and crosses
+--}
+
+
+hint : Row a -> Row Puzzle.Guess -> (a -> Bool) -> Hint
+hint gridRow guessRow isFilled =
+    let
+        guessIsFilled =
+            (\guess ->
+                case guess of
+                    Puzzle.Filled ->
+                        True
+
+                    _ ->
+                        False
+            )
+
+        groupFold isFilled_ =
+            (\( point, whatever ) hint ->
+                let
+                    ( head, tail ) =
+                        uncons hint
+                in
+                    if isFilled_ whatever then
+                        case head of
+                            Just number ->
+                                cons (Just (number + 1)) tail
+
+                            Nothing ->
+                                cons (Just (1)) (head :: tail)
+                    else
+                        cons Nothing (head :: tail)
+            )
+
+        getGroupings isFilled_ row =
+            (Cons.foldl
+                (groupFold isFilled_)
+                (cons Nothing [])
+                row
+            )
+                |> Cons.filterMap identity
+                |> List.reverse
+
+        gridGroupings =
+            getGroupings isFilled gridRow
+
+        guessGroupings =
+            getGroupings guessIsFilled guessRow
+    in
+        if guessGroupings < gridGroupings then
+            let
+                diff =
+                    List.length gridGroupings - List.length guessGroupings
+
+                guessGroupingsExtended =
+                    guessGroupings ++ List.repeat diff 0
+            in
+                List.map2 (\hintGroup guessGroup -> ( hintGroup, hintGroup == guessGroup )) (gridGroupings) (guessGroupingsExtended)
+        else
+            List.map2 (\hintGroup guessGroup -> ( hintGroup, hintGroup == guessGroup )) (gridGroupings) (guessGroupings)
