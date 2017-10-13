@@ -319,11 +319,10 @@ hintsForRow isFilled solutionRow guessRow =
                 solutionFilledGroupSizes =
                     toGroups toGroupType solutionRow |> groupsToFilledCounts
             in
-                Cons.foldl
-                    (\(Group groupType size) ( hint, remainingSolutions ) ->
-                        --placeholder
+                neighbourFold
+                    (\( maybePrevious, currentGroup, maybeNext ) ( hint, remainingSolutions ) ->
                         ( hint, remainingSolutions )
                     )
                     ( [], solutionFilledGroupSizes )
-                    (toGroups guessToGroupType guessRow)
+                    (Cons.toList (toGroups guessToGroupType guessRow))
                     |> Tuple.first
