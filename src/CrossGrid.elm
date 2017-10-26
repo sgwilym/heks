@@ -12,6 +12,7 @@ type alias Hint =
 
 type Axis
     = X
+    | Y
     | Z
 
 
@@ -19,25 +20,29 @@ type alias Row a =
     Cons ( HexGrid.Point, a )
 
 
-rowNumbers : HexGrid a -> { x : Set Int, z : Set Int }
+rowNumbers : HexGrid a -> { x : Set Int, y : Set Int, z : Set Int }
 rowNumbers grid =
     HexGrid.foldl
         (\( x, z ) _ rows ->
             { x = Set.insert x rows.x
+            , y = Set.insert (-x - z) rows.y
             , z = Set.insert z rows.z
             }
         )
-        { x = Set.empty, z = Set.empty }
+        { x = Set.empty, y = Set.empty, z = Set.empty }
         grid
 
 
-rows : HexGrid a -> ( List (Row a), List (Row a) )
+rows : HexGrid a -> ( List (Row a), List (Row a), List (Row a) )
 rows grid =
     let
         numbers =
             rowNumbers grid
     in
-        ( (Set.toList numbers.x |> List.filterMap (rowAt grid X)), (Set.toList numbers.z |> List.filterMap (rowAt grid Z)) )
+        ( (Set.toList numbers.x |> List.filterMap (rowAt grid X))
+        , (Set.toList numbers.y |> List.filterMap (rowAt grid Y))
+        , (Set.toList numbers.z |> List.filterMap (rowAt grid Z))
+        )
 
 
 rowAt : HexGrid a -> Axis -> Int -> Maybe (Row a)
@@ -48,6 +53,9 @@ rowAt grid axis rowNumber =
             case axis of
                 X ->
                     x == rowNumber
+
+                Y ->
+                    (-x - z) == rowNumber
 
                 Z ->
                     z == rowNumber

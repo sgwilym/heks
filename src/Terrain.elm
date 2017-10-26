@@ -12,7 +12,7 @@ randomTerrain : Random.Generator Terrain
 randomTerrain =
     let
         terrainFromInt int =
-            if int <= 6 then
+            if int <= 5 then
                 Earth
             else
                 Sea

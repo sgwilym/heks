@@ -14,19 +14,23 @@ import Dict
 gridToHintLabels : HexGrid.Layout -> HexGrid Terrain -> HexGrid Puzzle.Guess -> List Collage.Form
 gridToHintLabels layout grid guesses =
     let
-        ( xRows, zRows ) =
+        ( xRows, yRows, zRows ) =
             CrossGrid.rows grid
 
-        ( gxRows, gzRows ) =
+        ( gxRows, gyRows, gzRows ) =
             CrossGrid.rows guesses
 
         txRows =
             List.map2 (,) xRows gxRows
 
+        tyRows =
+            List.map2 (,) yRows gyRows
+
         tzRows =
             List.map2 (,) zRows gzRows
     in
         List.map (rowToHintLabelForm layout CrossGrid.X) txRows
+            ++ List.map (rowToHintLabelForm layout CrossGrid.Y) tyRows
             ++ List.map (rowToHintLabelForm layout CrossGrid.Z) tzRows
 
 
@@ -44,6 +48,9 @@ rowToHintLabelForm layout axis ( solutionRow, guessRow ) =
 
                                 CrossGrid.Z ->
                                     x
+
+                                CrossGrid.Y ->
+                                    -x - z
                         )
                         solutionRow
 
@@ -51,6 +58,9 @@ rowToHintLabelForm layout axis ( solutionRow, guessRow ) =
                     case axis of
                         CrossGrid.Z ->
                             Cons.head sorted
+
+                        CrossGrid.Y ->
+                            Cons.reverse sorted |> Cons.head
 
                         CrossGrid.X ->
                             Cons.reverse sorted |> Cons.head
@@ -84,6 +94,9 @@ rowToHintLabelForm layout axis ( solutionRow, guessRow ) =
                 CrossGrid.X ->
                     (HexGrid.hexToPixel layout (HexGrid.neighbor 5 firstHex))
 
+                CrossGrid.Y ->
+                    (HexGrid.hexToPixel layout (HexGrid.neighbor 1 firstHex))
+
                 CrossGrid.Z ->
                     (HexGrid.hexToPixel layout (HexGrid.neighbor 3 firstHex))
 
@@ -91,6 +104,9 @@ rowToHintLabelForm layout axis ( solutionRow, guessRow ) =
             case axis of
                 CrossGrid.X ->
                     degrees 60
+
+                CrossGrid.Y ->
+                    degrees -60
 
                 CrossGrid.Z ->
                     degrees 0
