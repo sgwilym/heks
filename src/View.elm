@@ -59,9 +59,7 @@ rowToHintLabelForm layout axis ( solutionRow, guessRow ) =
                     |> Tuple.first
 
         hintText =
-            CrossGrid.hint
-                solutionRow
-                guessRow
+            CrossGrid.hintsForRow
                 (\terrain ->
                     case terrain of
                         Terrain.Earth ->
@@ -70,6 +68,8 @@ rowToHintLabelForm layout axis ( solutionRow, guessRow ) =
                         _ ->
                             False
                 )
+                solutionRow
+                guessRow
                 |> List.map
                     (\( hintNumber, isSatisfied ) ->
                         if isSatisfied then

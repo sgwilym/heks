@@ -126,6 +126,7 @@ toGroups toGroupType row =
             )
             (cons (Group (Cons.head groupTypes) 0) [])
             groupTypes
+            |> Cons.reverse
 
 
 groupsToFilledCounts : Cons Group -> List Int
@@ -146,11 +147,11 @@ groupsToFilledCounts groupCons =
 largestFilledCount : Cons Group -> Int
 largestFilledCount groupCons =
     Cons.foldl
-        (\(Group groupType number) largest ->
+        (\(Group groupType size) largest ->
             case groupType of
                 Filled ->
-                    if number > largest then
-                        number
+                    if size > largest then
+                        size
                     else
                         largest
 
@@ -174,9 +175,9 @@ groupDrop toDrop groups =
                 if groupSize > dropRemaining then
                     ( leftovers ++ [ (Group groupType (groupSize - dropRemaining)) ], 0 )
                 else
-                    ( leftovers, dropRemaining - groupSize )
+                    ( leftovers ++ [ (Group groupType groupSize) ], dropRemaining - groupSize )
             else
-                ( leftovers ++ [ (Group groupType groupSize) ], dropRemaining )
+                ( leftovers, dropRemaining )
         )
         ( [], toDrop )
         groups
@@ -214,7 +215,10 @@ enoughSpace solutionGroups guessGroups followsFilledGroup =
                 guessGroups
                 |> Tuple.first
     in
-        spaceAvailable >= firstFilledGroupNeeds && enoughSpace (groupDrop firstFilledGroupNeeds solutionGroups) (groupDrop firstFilledGroupNeeds guessGroups) True
+        if spaceAvailable >= firstFilledGroupNeeds then
+            enoughSpace (groupDrop firstFilledGroupNeeds solutionGroups) (groupDrop firstFilledGroupNeeds guessGroups) True
+        else
+            False
 
 
 
@@ -253,10 +257,10 @@ zeroHintsSatisfied toGroupType solutionRow guessRow =
         guessLargestFilledGroup =
             largestFilledCount (toGroups guessToGroupType guessRow)
     in
-        if guessLargestFilledGroup > solutionLargestFilledGroup then
+        if guessLargestFilledGroup > 0 && guessLargestFilledGroup > solutionLargestFilledGroup then
             True
         else
-            enoughSpace (toGroups toGroupType solutionRow |> Cons.toList) (toGroups guessToGroupType guessRow |> Cons.toList) False == False
+            enoughSpace (toGroups toGroupType solutionRow |> Cons.toList) (toGroups guessToGroupType guessRow |> Cons.toList) False == False |> Debug.log "enoughSpace"
 
 
 
@@ -318,10 +322,63 @@ hintsForRow isFilled solutionRow guessRow =
             let
                 solutionFilledGroupSizes =
                     toGroups toGroupType solutionRow |> groupsToFilledCounts
+
+                addHint hints remainingSolutions hintSize isSatisfied =
+                    case List.tail remainingSolutions of
+                        Just tail ->
+                            ( hints ++ [ ( hintSize, isSatisfied ) ]
+                            , if isSatisfied then
+                                tail
+                              else
+                                remainingSolutions
+                            )
+
+                        Nothing ->
+                            ( hints ++ [ ( hintSize, isSatisfied ) ], [] )
             in
                 neighbourFold
                     (\( maybePrevious, currentGroup, maybeNext ) ( hint, remainingSolutions ) ->
-                        ( hint, remainingSolutions )
+                        case List.head remainingSolutions of
+                            Just solution ->
+                                let
+                                    hintAdder =
+                                        addHint hint remainingSolutions
+
+                                    (Group currentGroupType currentSize) =
+                                        currentGroup
+                                in
+                                    if solution == currentSize then
+                                        case currentGroupType of
+                                            Filled ->
+                                                case maybePrevious of
+                                                    Just (Group groupType size) ->
+                                                        case groupType of
+                                                            Crossed ->
+                                                                hintAdder size True
+
+                                                            _ ->
+                                                                hintAdder size False
+
+                                                    Nothing ->
+                                                        case maybeNext of
+                                                            Just (Group groupType size) ->
+                                                                case groupType of
+                                                                    Crossed ->
+                                                                        hintAdder size True
+
+                                                                    _ ->
+                                                                        hintAdder size False
+
+                                                            Nothing ->
+                                                                ( hint, remainingSolutions )
+
+                                            _ ->
+                                                ( hint, remainingSolutions )
+                                    else
+                                        ( hint, remainingSolutions )
+
+                            Nothing ->
+                                ( hint, remainingSolutions )
                     )
                     ( [], solutionFilledGroupSizes )
                     (Cons.toList (toGroups guessToGroupType guessRow))

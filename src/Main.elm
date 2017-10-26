@@ -18,7 +18,7 @@ import Keyboard
 
 puzzleRadius : number
 puzzleRadius =
-    4
+    5
 
 
 type alias Model =
